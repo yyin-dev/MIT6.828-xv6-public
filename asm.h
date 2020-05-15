@@ -2,6 +2,9 @@
 // assembler macros to create x86 segments
 //
 
+// YY:
+// Each segment is 8-byte long.
+
 #define SEG_NULLASM                                             \
         .word 0, 0;                                             \
         .byte 0, 0, 0, 0
