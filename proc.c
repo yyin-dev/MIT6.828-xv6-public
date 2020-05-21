@@ -78,6 +78,7 @@ allocproc(void)
 
   acquire(&ptable.lock);
 
+  // looking for UNUSED proc in the table
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
@@ -93,9 +94,15 @@ found:
 
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
+    // Fail to allocate kernel stack
     p->state = UNUSED;
     return 0;
   }
+
+  // p->kstack points to the lower end of the allocated space.
+  // sp points to the upper end of the allocated space.
+  // p->kstack is the limit of the stack space.
+  // Recall that the stack grows downwards.
   sp = p->kstack + KSTACKSIZE;
 
   // Leave room for trap frame.

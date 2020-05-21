@@ -105,6 +105,8 @@ pde_t entrypgdir[NPDENTRIES] = {
   [0] = (0) | PTE_P | PTE_W | PTE_PS,
   // Map VA's [KERNBASE, KERNBASE+4MB) to PA's [0, 4MB)
   [KERNBASE>>PDXSHIFT] = (0) | PTE_P | PTE_W | PTE_PS,
+  // KERNBASE = 0x80000000, PDXSHIFT = 22
+  // KERNBASE>>PDXSHIFT = 512
 };
 
 //PAGEBREAK!

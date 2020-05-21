@@ -29,4 +29,4 @@ trapret:
   popl %es
   popl %ds
   addl $0x8, %esp  # trapno and errcode
-  iret
+  iret # Pops %cs, $eip, %flags, %esp, %ss from stack

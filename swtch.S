@@ -8,8 +8,8 @@
 
 .globl swtch
 swtch:
-  movl 4(%esp), %eax
-  movl 8(%esp), %edx
+  movl 4(%esp), %eax # p->context
+  movl 8(%esp), %edx # &(c->scheduler)
 
   # Save old callee-saved registers
   pushl %ebp
@@ -18,12 +18,12 @@ swtch:
   pushl %edi
 
   # Switch stacks
-  movl %esp, (%eax)
-  movl %edx, %esp
+  movl %esp, (%eax) # *(p->context) = %esp
+  movl %edx, %esp   # %esp = &(c->scheduler)
 
   # Load new callee-saved registers
   popl %edi
   popl %esi
   popl %ebx
   popl %ebp
-  ret
+  ret # Return to forkret

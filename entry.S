@@ -63,6 +63,6 @@ entry:
   # the assembler produces a PC-relative instruction
   # for a direct jump.
   mov $main, %eax
-  jmp *%eax
+  jmp *%eax   # `jmp %eax`. https://stackoverflow.com/a/30803391/9057530
 
 .comm stack, KSTACKSIZE
