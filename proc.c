@@ -176,7 +176,7 @@ growproc(int n)
     if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
       return -1;
   }
-  curproc->sz = sz;
+  curproc->sz = sz; // increment/decrement curproc->sz
   switchuvm(curproc);
   return 0;
 }

@@ -47,7 +47,12 @@ exec(char *path, char **argv)
       continue;
     if(ph.memsz < ph.filesz)
       goto bad;
-    if(ph.vaddr + ph.memsz < ph.vaddr)
+    if(ph.vaddr + ph.memsz < ph.vaddr) 
+      // Overflow check.
+      // The user could construct an ELF bianry with ph.vaddr points to the
+      // kernel and ph.memsz large enough such that the sum overflows to 0x1000.
+      // Without this check, this can be exploited by user to run arbitrary code
+      // with kernel privileges. 
       goto bad;
     if((sz = allocuvm(pgdir, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;

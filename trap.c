@@ -77,6 +77,17 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:
+    /* Lazy page allocation, without error checking/handling */
+    ; // https://stackoverflow.com/a/18496437/9057530
+    uint faultAddr = rcr2();
+    uint pageBoundary = PGROUNDDOWN(faultAddr);
+    char* mem = kalloc();
+    memset(mem, 0, PGSIZE);
+    
+    int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
+    mappages(myproc()->pgdir, (char *)pageBoundary, PGSIZE, V2P(mem), PTE_W|PTE_U);
+    break;
 
   //PAGEBREAK: 13
   default:

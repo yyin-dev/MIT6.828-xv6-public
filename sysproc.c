@@ -42,6 +42,22 @@ sys_getpid(void)
   return myproc()->pid;
 }
 
+/* Without lazy page allocation */
+// int
+// sys_sbrk(void)
+// {
+//   int addr;
+//   int n;
+
+//   if(argint(0, &n) < 0)
+//     return -1;
+//   addr = myproc()->sz;
+//   if(growproc(n) < 0)
+//     return -1;
+//   return addr;
+// }
+
+/* With lazy page allocation */
 int
 sys_sbrk(void)
 {
@@ -51,8 +67,7 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
+  myproc()->sz += n;
   return addr;
 }
 
