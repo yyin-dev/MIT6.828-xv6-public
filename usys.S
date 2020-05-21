@@ -1,6 +1,16 @@
 #include "syscall.h"
 #include "traps.h"
 
+# SYSCALL(name) is like a template for defining functions.
+# For example, when "fork" is the argument, we get the 
+# following from "SYSCALL(fork)":
+#
+# .globl fork
+# fork:
+#   movl $SYS_fork, %eax
+#   int $T_SYSCALL;
+#   ret
+
 #define SYSCALL(name) \
   .globl name; \
   name: \
@@ -29,3 +39,4 @@ SYSCALL(getpid)
 SYSCALL(sbrk)
 SYSCALL(sleep)
 SYSCALL(uptime)
+SYSCALL(date)
