@@ -21,6 +21,11 @@ tvinit(void)
 
   for(i = 0; i < 256; i++)
     SETGATE(idt[i], 0, SEG_KCODE<<3, vectors[i], 0);
+  
+  // The x86 treats syscall differently. (1) The 2nd argment is 1, not clearing
+  // IF flag when trapping into the kernel, allowing other interrupts to
+  // happen during the meantime. (2) The last argument is DPL_USER, allowing
+  // user to invoke using `int`.
   SETGATE(idt[T_SYSCALL], 1, SEG_KCODE<<3, vectors[T_SYSCALL], DPL_USER);
 
   initlock(&tickslock, "time");
@@ -51,6 +56,32 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+
+      // alarm syscall
+      struct proc *p = myproc();
+      if (p != 0 && (tf->cs & 3) == 3) {
+        if (p->alarmhandler) {
+          if (ticks - p->prevalarmtick >= p->alarmticks) {
+            p->prevalarmtick = ticks;
+
+            // Cannot do `p->alarmhandler()`. We're in kernel space and 
+            // using kernel stack, but the user function should be
+            // called in user space and on user stack.
+
+            //`tf->eip` and `p->alarmhandler` matches alarmtest.asm.
+            // cprintf("tf->eip: 0x%x\n", tf->eip);
+            // cprintf("handler: 0x%x\n", (uint) p->alarmhandler);
+            
+            // Set return address (next instruction when interrupt happens) 
+            // after the handler returns
+            tf->esp -= 4;
+            * ((uint *)tf->esp) = tf->eip;
+            
+            // Set return address (handler) after return to user space
+            tf->eip = (uint) p->alarmhandler;
+          }
+        }
+      }
       wakeup(&ticks);
       release(&tickslock);
     }

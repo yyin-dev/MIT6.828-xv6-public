@@ -119,6 +119,9 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  // alarm sys call
+  p->alarmhandler = 0;
+  p->prevalarmtick = 0;
   return p;
 }
 

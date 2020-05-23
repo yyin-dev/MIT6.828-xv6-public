@@ -10,15 +10,17 @@ alltraps:
   pushl %gs
   pushal
   
-  # Set up data segments.
+  # Set segment selectors:
+  # (1) The processor sets %cs and %ss 
+  # (2) alltraps sets up data segments by setting %ds and %es.
   movw $(SEG_KDATA<<3), %ax
   movw %ax, %ds
   movw %ax, %es
 
   # Call trap(tf), where tf=%esp
-  pushl %esp
+  pushl %esp # pointing to a 'struct trapframe`, as an arg to trap
   call trap
-  addl $4, %esp
+  addl $4, %esp # Pop the argument
 
   # Return falls through to trapret...
 .globl trapret
