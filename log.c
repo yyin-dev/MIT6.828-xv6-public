@@ -32,8 +32,9 @@
 // Contents of the header block, used for both the on-disk header block
 // and to keep track in memory of logged block# before commit.
 struct logheader {
-  int n;
-  int block[LOGSIZE];
+  int n;              // Number of log blocks in the superblock
+  int block[LOGSIZE]; // Log blocks
+  // LOGSIZE: max data blocks in on-disk log
 };
 
 struct log {
@@ -130,10 +131,12 @@ begin_op(void)
     if(log.committing){
       sleep(&log, &log.lock);
     } else if(log.lh.n + (log.outstanding+1)*MAXOPBLOCKS > LOGSIZE){
+      // +1 to include this syscall itself
       // this op might exhaust log space; wait for commit.
       sleep(&log, &log.lock);
     } else {
-      log.outstanding += 1;
+      log.outstanding += 1; // Prevents a commit from occuring during a syscall.
+                            // Check comment in end_op(). 
       release(&log.lock);
       break;
     }
@@ -152,6 +155,7 @@ end_op(void)
   if(log.committing)
     panic("log.committing");
   if(log.outstanding == 0){
+    // commit only if not during execution of system calls.
     do_commit = 1;
     log.committing = 1;
   } else {
@@ -192,6 +196,8 @@ write_log(void)
 static void
 commit()
 {
+  // When commit() is called, all existing logs at the time
+  // is grouped into one transaction.
   if (log.lh.n > 0) {
     write_log();     // Write modified blocks from cache to log
     write_head();    // Write header to disk -- the real commit
@@ -222,12 +228,13 @@ log_write(struct buf *b)
 
   acquire(&log.lock);
   for (i = 0; i < log.lh.n; i++) {
+    // Multiple writes to the same block in the same transaction 
     if (log.lh.block[i] == b->blockno)   // log absorbtion
       break;
   }
   log.lh.block[i] = b->blockno;
   if (i == log.lh.n)
-    log.lh.n++;
+    log.lh.n++;        // increment count in the log header
   b->flags |= B_DIRTY; // prevent eviction
   release(&log.lock);
 }

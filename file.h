@@ -13,7 +13,7 @@ struct file {
 struct inode {
   uint dev;           // Device number
   uint inum;          // Inode number
-  int ref;            // Reference count
+  int ref;            // Reference count (C pointers)
   struct sleeplock lock; // protects everything below here
   int valid;          // inode has been read from disk?
 

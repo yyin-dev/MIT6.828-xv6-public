@@ -29,9 +29,12 @@
 struct {
   struct spinlock lock;
   struct buf buf[NBUF];
+  // `buf` is only used in `binit`. Other code
+  // should access beffer using `bcache.head`.
 
   // Linked list of all buffers, through prev/next.
   // head.next is most recently used.
+  // Note that the list forms a loop. 
   struct buf head;
 } bcache;
 
@@ -58,6 +61,12 @@ binit(void)
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
 // In either case, return locked buffer.
+//
+// Book: The sleep-lock protects reads and writes of the block's 
+// buffered content, while bcache.lock protects information about
+// which blocks are cached. Thus, it's safe to acquire b->lock
+// outside the cirtial section of bcache.lock.
+// bget() acquires the sleep-lock on the buffer.
 static struct buf*
 bget(uint dev, uint blockno)
 {
@@ -70,7 +79,7 @@ bget(uint dev, uint blockno)
     if(b->dev == dev && b->blockno == blockno){
       b->refcnt++;
       release(&bcache.lock);
-      acquiresleep(&b->lock);
+      acquiresleep(&b->lock); // bcache.lock is already released.
       return b;
     }
   }
@@ -82,10 +91,10 @@ bget(uint dev, uint blockno)
     if(b->refcnt == 0 && (b->flags & B_DIRTY) == 0) {
       b->dev = dev;
       b->blockno = blockno;
-      b->flags = 0;
+      b->flags = 0; // Clears B_VALID, to ensure reading in bread()
       b->refcnt = 1;
       release(&bcache.lock);
-      acquiresleep(&b->lock);
+      acquiresleep(&b->lock); // bcache.lock is already released.
       return b;
     }
   }

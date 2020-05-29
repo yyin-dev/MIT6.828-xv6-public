@@ -238,6 +238,16 @@ iupdate(struct inode *ip)
 // Find the inode with number inum on device dev
 // and return the in-memory copy. Does not lock
 // the inode and does not read it from disk.
+// 
+// iget(), different from bget(), doesn't acquire the lock.
+// A struct inode pointer returned by iget() is guaranteed to
+// be valid until correspoinding call to iput(). The inode won't 
+// be deleted, and the memory referred to by the pointer won't be
+// re-used for a different inode.
+//
+// icahce.lock protects the invariant that an inode is presen in cache
+// at most once, and the invariant that a cached inode's ref field
+// counts the number of in-memory pointers to the cached inode. 
 static struct inode*
 iget(uint dev, uint inum)
 {
@@ -377,16 +387,20 @@ bmap(struct inode *ip, uint bn)
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
-      ip->addrs[bn] = addr = balloc(ip->dev);
+      ip->addrs[bn] = addr = balloc(ip->dev); // Allocate a new data block
     return addr;
   }
   bn -= NDIRECT;
 
   if(bn < NINDIRECT){
     // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0)
-      ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
+    if((addr = ip->addrs[NDIRECT]) == 0) {
+      // Allocate a new in-direct block containig pointers
+      // Note that balloc() would zero the block
+      ip->addrs[NDIRECT] = addr = balloc(ip->dev); 
+    }
+
+    bp = bread(ip->dev, addr); // Read the in-direct block
     a = (uint*)bp->data;
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);
