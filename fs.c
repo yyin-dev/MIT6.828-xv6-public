@@ -391,6 +391,7 @@ bmap(struct inode *ip, uint bn)
   uint addr, *a;
   struct buf *bp;
 
+  // Case 1: within direct block
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
       ip->addrs[bn] = addr = balloc(ip->dev); // Allocate a new data block
@@ -398,6 +399,7 @@ bmap(struct inode *ip, uint bn)
   }
   bn -= NDIRECT;
 
+  // Case 2: within singly-indirect block
   if(bn < NINDIRECT){
     // Load indirect block, allocating if necessary.
     if((addr = ip->addrs[NDIRECT]) == 0) {
@@ -406,13 +408,46 @@ bmap(struct inode *ip, uint bn)
       ip->addrs[NDIRECT] = addr = balloc(ip->dev); 
     }
 
-    bp = bread(ip->dev, addr); // Read the in-direct block
+    bp = bread(ip->dev, addr); // Read the indirect block
     a = (uint*)bp->data;
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
+    return addr;
+  }
+  bn -= NINDIRECT;
+
+  // Case 3: within doubly-indirect block
+  if (bn < NDBLINDIRECT) {
+    if ((addr = ip->addrs[NDIRECT + 1]) == 0) {
+      // Allocate new block for the doubly-indirect block
+      ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+    }
+
+    struct buf *dbly_indirect_bp, *sgly_indirect_bp;
+    int dbly_indirect_index, sgly_indirect_index;
+    uint *data;
+
+    dbly_indirect_index = bn / NINDIRECT;
+    dbly_indirect_bp = bread(ip->dev, addr); // Read the doubly indirect block
+    data = (uint *)dbly_indirect_bp->data;
+    if ((addr = data[dbly_indirect_index]) == 0) {
+      // Allocate a new block for the singly-indirect block
+      data[dbly_indirect_index] = addr = balloc(ip->dev);
+      log_write(dbly_indirect_bp);
+    }
+    brelse(dbly_indirect_bp);
+
+    sgly_indirect_index = bn % NINDIRECT;
+    sgly_indirect_bp = bread(ip->dev, addr);
+    data = (uint *)sgly_indirect_bp->data;
+    if ((addr = data[sgly_indirect_index]) == 0) {
+      data[sgly_indirect_index] = addr = balloc(ip->dev);
+      log_write(sgly_indirect_bp);
+    }
+    brelse(sgly_indirect_bp);
     return addr;
   }
 
