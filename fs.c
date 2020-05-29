@@ -379,6 +379,12 @@ iunlockput(struct inode *ip)
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
+//
+// Block numbers used:
+// bn: logial block - block number relative to the start of the file.
+// ip->addrs[], addr: disk block numbers. 
+// You can consider bmap() as mapping a file's logical block number
+// into disk block number. 
 static uint
 bmap(struct inode *ip, uint bn)
 {
